@@ -1,0 +1,149 @@
+package infinite.JdbcLms;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class EmployDAO {
+	Connection connection;
+	PreparedStatement pst;
+
+	public String EmpUpdate(int EmpId,Employ employ) throws ClassNotFoundException, SQLException {
+		Employ EmpFound=SearchEmp(EmpId);
+		if(EmpFound!=null) {
+			connection = ConnectionHelper.getConnection();
+			String cmd = "Update employee set EMP_NAME=?, EMP_MAIL=?, EMP_MOB_NO=?,EMP_DT_JOIN=?, EMP_DEPT=?,EMP_AVAIL_LEAVE_BAL=? Where EMP_ID=?";
+			connection = ConnectionHelper.getConnection();
+			pst = connection.prepareStatement(cmd);
+			pst.setString(1, employ.getEmpName());
+			pst.setString(2, employ.getEmpMail());
+			pst.setLong(3, employ.getEmpMobNo());
+			pst.setString(4,employ.getDateOfJoin());
+			pst.setString(5, employ.getEmpDept());
+			//pst.setInt(5, employ.getEmpMngId());
+			pst.setInt(6, employ.getEmpLevBal());
+			pst.setInt(7,EmpId);
+			
+			pst.executeUpdate();
+			return "Employ Details Updated....";
+		}
+		
+		return "Record Not Found !!!";
+	}
+	
+	public String EmpUpdate(int EmpId,Employ employ) throws ClassNotFoundException, SQLException {
+		Employ EmpFound=SearchEmp(EmpId);
+		if(EmpFound!=null) {
+			connection = ConnectionHelper.getConnection();
+			String cmd = "Update emplyee set EMP_NAME=?, EMP_MAIL=?, EMP_MOB_NO=?, EMP_DEPT=?, EMP_MANAGER_ID=? EMP_AVAIL_LEAVE_BAL=?"
+					+ " Where EMP_ID=?";
+			connection = ConnectionHelper.getConnection();
+			pst = connection.prepareStatement(cmd);
+			pst.setString(1, employ.getEmpName());
+			pst.setString(2, employ.getEmpMail());
+			pst.setLong(3, employ.getEmpMobNo());
+			pst.setString(4, employ.getEmpDept());
+			pst.setInt(5, employ.getEmpMngId());
+			pst.setInt(6, employ.getEmpLevBal());
+			pst.setInt(7,EmpId);
+			
+			pst.executeUpdate();
+			return "Employ Details Updated....";
+		}
+		
+		return "Record Not Found !!!";
+	}
+	public Employ SearchEmp(int EmpId) throws ClassNotFoundException, SQLException {
+		connection = ConnectionHelper.getConnection();
+		String cmd = "select * from employee where Emp_Id=?";
+		pst = connection.prepareStatement(cmd);
+		pst.setInt(1, EmpId);
+		ResultSet rs = pst.executeQuery();
+		Employ employ = null;
+		
+		if (rs.next()) {
+			employ = new Employ();
+			employ.setEmpName(rs.getString("Emp_ID"));
+			employ.setEmpMail(rs.getString("EMP_MAIL"));
+			employ.setEmpMobNo(rs.getLong("EMP_MOB_NO"));
+			employ.setEmpDept(rs.getString("EMP_DEPT"));
+			employ.setEmpMngId(rs.getInt("EMP_MANAGER_ID"));
+			employ.setEmpLevBal(rs.getInt("EMP_AVAIL_LEAVE_BAL"));
+		}
+		return employ;
+		
+		
+	}
+	
+
+}
+______________________________________________________________________________________________
+
+package infinite.JdbcLms;
+
+import java.sql.SQLException;
+import java.util.Scanner;
+
+public class ShowEmpMain {
+	public static void main(String[] args) {
+		int EmpId;
+		Scanner sc = new Scanner(System.in);
+		System.out.println("Enter AccountNo   ");
+		EmpId = sc.nextInt();
+		
+		try {
+			Employ employ = new EmployDAO().SearchEmp(EmpId);
+			if (employ!=null) {
+				System.out.println(employ);
+			} else {
+				System.out.println("Record Not Found !!!");
+			}
+		} catch (ClassNotFoundException | SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+}
+__________________________________________________________________________________________________
+
+package infinite.JdbcLms;
+
+import java.sql.SQLException;
+import java.util.Scanner;
+
+public class EmpUpdateMain {
+	public static void main(String[] args) throws ClassNotFoundException, SQLException {
+		Scanner sc = new Scanner(System.in);
+		EmployDAO dao = new EmployDAO();
+		Employ employ = new Employ();
+		System.out.println("Enter EmpNO : ");
+		int EmpId=sc.nextInt();
+		Employ res = new EmployDAO().SearchEmp(EmpId);
+		if(res!=null) {
+			System.out.println("Enter EmpName : ");
+			employ.setEmpName(sc.next());
+			System.out.println("Enter EmpMail : ");
+			employ.setEmpMail(sc.next());
+			System.out.println("Enter Emp Mobile Number : ");
+			employ.setEmpMobNo(sc.nextLong());
+			System.out.println("Enter DateOfJoin : ");
+			employ.setDateOfJoin(sc.next());
+			System.out.println("Enter EmpDept : ");
+			employ.setEmpDept(sc.next());
+			//System.out.println("Enter Manager ID : ");
+			//employ.setEmpMngId(sc.nextInt());
+			System.out.println("Enter Emp Avl Bal Leavs : ");
+			employ.setEmpLevBal(sc.nextInt());
+		}
+		
+		try {
+			System.out.println(dao.EmpUpdate(EmpId,employ));
+		} catch (ClassNotFoundException | SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+}
+___________________________________________________________________________________________________
