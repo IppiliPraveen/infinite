@@ -1,0 +1,484 @@
+<!--                   *** ADD COMPLAINT***             -->
+
+<%@page import="java.sql.Date"%>
+<%@page import="infinite.ComplaintJsp.Complain"%>
+<%@page import="infinite.ComplaintJsp.ComplaintDAO"%>
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+    pageEncoding="ISO-8859-1"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Add Complaint</title>
+</head>
+<body>
+	<% ComplaintDAO dao=new ComplaintDAO();
+		String cId = dao.CreateCid();
+	%>
+	<form method="get" action="AddComp.jsp">
+	<center>
+		Complaint Id : 
+		<input type="number" name="cId" readonly="readonly" value=<%=cId%>/><br/><br/>
+		Compaint Type
+		<input type="text" name="Compaint Type"/><br/><br/>
+		Compaint Discription
+		<input type="text" name="Compaint Discription"/><br/><br/>
+		Complaint Date
+		<input type="date" name="date"/><br/><br/>
+		Complaint Severity
+		<select name="Severity">
+				<option value="LOW">LOW</option>
+				<option value="MEDIUM">MEDIUM</option>
+				<option value="HIGH">HIGH</option>
+			</select> <br/><br/> 
+		Status
+		<select name="Status">
+				<option value="PENDING">PENDING</option>
+				<option value="ACCEPTED">ACCEPTED</option>
+				<option value="REJECTED">REJECTED</option>
+			</select> <br/><br/> 
+		<input type="submit" value="Add Complaint" />
+	</center>
+	</form>
+	<%
+	if (request.getParameter("cId")!=null){
+		Complain Comp=new Complain();
+	Comp.setcId("cId");
+	Comp.setcType(request.getParameter("Compaint Type"));
+	Comp.setcDis(request.getParameter("Compaint Discription"));
+	Comp.setcDate(Date.valueOf(request.getParameter("date")));
+	Comp.setSever(request.getParameter("Severity"));
+	Comp.setStats(request.getParameter("Status"));
+	dao.AddComplaint(Comp); 
+	%>
+	<jsp:forward page="ShowAllComp.jsp"/>
+	<% }%>
+	
+		
+</body>
+</html>
+-------------------------------------------------------------------------------------------------------------------
+
+/*               ***COMPLAINTDAO***    */
+
+package infinite.ComplaintJsp;
+
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+
+public class ComplaintDAO {
+	Connection connection;
+	PreparedStatement pst;
+	
+	public int dateDiff(Date date) throws ClassNotFoundException, SQLException {
+
+		 
+		 
+		String cmd="select curdate()";
+		connection=ConnectionHelper.getConnection();
+    	pst=connection.prepareStatement(cmd);
+    	ResultSet rs=pst.executeQuery();
+    	Date crdt=date;
+    	if(rs.next()) {
+    		crdt =rs.getDate(1);
+    	}
+    	
+    	long ms = crdt.getTime() - date.getTime();
+		 long m = ms / (1000 * 24 * 60 * 60);
+		    int days = (int) m;
+		return days;
+	}
+	
+	public String CreateCid() throws ClassNotFoundException, SQLException {
+		String cmd="select case when max(ComplaintID) is NULL THEN 1 else max(ComplaintID)+1 END cid from Complaint";
+		connection = ConnectionHelper.getConnection();
+		pst=connection.prepareStatement(cmd);
+		ResultSet rs=pst.executeQuery();
+		rs.next();
+		int cid=rs.getInt("cid");
+		return String.valueOf(cid);
+	}
+	public String  AddComplaint(Complain comp) throws ClassNotFoundException, SQLException {
+		String cid=CreateCid();
+		comp.setcId(cid);
+		String cmd="insert into Complaint(ComplaintID,ComplaintType,CDescription,ComplaintDate,Severity,Status) "
+				+ "values(?,?,?,?,?,?)";
+		connection=ConnectionHelper.getConnection();
+		pst=connection.prepareStatement(cmd);
+		pst.setString(1,cid);
+		pst.setString(2,comp.getcType());
+		pst.setString(3,comp.getcDis());
+		pst.setDate(4,comp.getcDate());
+		pst.setString(5,comp.getSever());
+		pst.setString(6,comp.getStats());
+		pst.executeUpdate();
+		
+		return "SuccessFully Complaint Added";
+	}
+	public Complain SearchComp(String cid) throws ClassNotFoundException, SQLException {
+		connection=ConnectionHelper.getConnection();
+		String cmd="select * from Complaint where ComplaintID=?";
+		pst=connection.prepareStatement(cmd);
+		pst.setString(1,cid);
+		ResultSet rs=pst.executeQuery();
+		Complain comp=null;
+		
+		while(rs.next()) {
+			comp=new Complain();
+			comp.setcId(rs.getString("ComplaintID"));
+			comp.setcType(rs.getString("ComplaintType"));
+			comp.setcDis(rs.getString("CDescription"));
+			comp.setcDate(rs.getDate("ComplaintDate"));
+			comp.setSever(rs.getString("Severity"));
+			comp.setStats(rs.getString("Status"));
+		}
+		return comp;
+	}
+	public String UpdateComp(String cid,Complain comp) throws ClassNotFoundException, SQLException {
+		Complain compFound=SearchComp(cid);
+		if(compFound!=null) {
+			String cmd="update Complaint set ComplaintType=?,CDescription=?,ComplaintDate=?,"
+					+ "Severity=?,Status=? WHERE ComplaintID=?";
+			connection=ConnectionHelper.getConnection();
+			pst=connection.prepareStatement(cmd);
+			
+			pst.setString(1,comp.getcType());
+			pst.setString(2,comp.getcDis());
+			pst.setDate(3,comp.getcDate());
+			pst.setString(4,comp.getSever());
+			pst.setString(5,comp.getStats());
+			pst.setString(6,cid);
+			pst.executeUpdate();
+			
+			return "Complaint Data Is Updated Successfull :)";
+		}
+		return "Compaint Data Not Found !!!";
+	}
+	public Complain[] showAll() throws ClassNotFoundException, SQLException {
+		connection=ConnectionHelper.getConnection();
+		String cmd="select * from Complaint";
+		pst=connection.prepareStatement(cmd);
+		List<Complain> compList=new ArrayList<>();
+		ResultSet rs=pst.executeQuery();
+		Complain comp=null;
+		while(rs.next()) {
+			comp=new Complain();
+			comp.setcId(rs.getString("ComplaintID"));
+			comp.setcType(rs.getString("ComplaintType"));
+			comp.setcDis(rs.getString("CDescription"));
+			comp.setcDate(rs.getDate("ComplaintDate"));
+			comp.setSever(rs.getString("Severity"));
+			comp.setStats(rs.getString("Status"));
+			compList.add(comp);
+		}
+		return compList.toArray(new Complain[compList.size()]);
+	}
+	public void DeleteComp(String cid) throws ClassNotFoundException, SQLException {
+		Complain compFound=SearchComp(cid);
+		if(compFound!=null) {
+			String cmd="delete from Complaint where ComplaintID=?";
+			connection=ConnectionHelper.getConnection();
+			pst=connection.prepareStatement(cmd);
+			pst.setString(1,cid);
+			pst.executeUpdate();
+			System.out.println("Successfully Deleted....");
+			
+		}
+		System.out.println("Record Not Found !!!");
+	}
+}
+--------------------------------------------------------------------------------------------------------------------
+
+/*    ***COMPLAINT***    */
+
+package infinite.ComplaintJsp;
+
+import java.sql.Date;
+
+public class Complain {
+	private String cId;
+	private String cType;
+	private String cDis;
+	private Date cDate;
+	private String sever;
+	private String Stats;
+	public String getcId() {
+		return cId;
+	}
+	public void setcId(String cId) {
+		this.cId = cId;
+	}
+	public String getcType() {
+		return cType;
+	}
+	public void setcType(String cType) {
+		this.cType = cType;
+	}
+	public String getcDis() {
+		return cDis;
+	}
+	public void setcDis(String cDis) {
+		this.cDis = cDis;
+	}
+	public Date getcDate() {
+		return cDate;
+	}
+	public void setcDate(Date cDate) {
+		this.cDate = cDate;
+	}
+	public String getSever() {
+		return sever;
+	}
+	
+	public void setSever(String sever) {
+		this.sever = sever;
+	}
+	public String getStats() {
+		return Stats;
+	}
+	public void setStats(String stats) {
+		Stats = stats;
+	}
+	
+	public String toString() {
+		return "Complain [cId=" + cId + ", cType=" + cType + ", cDis=" + cDis + ", cDate=" + cDate + ", sever=" + sever
+				+ ", Stats=" + Stats + "]";
+	}
+}
+-----------------------------------------------------------------------------------------------------------------------
+
+<!--                ***SHOW ALL COMPLAINTS***      -->
+
+<%@page import="java.sql.Date"%>
+<%@page import="infinite.ComplaintJsp.Complain"%>
+<%@page import="infinite.ComplaintJsp.ComplaintDAO"%>
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+    pageEncoding="ISO-8859-1"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Complaint Table</title>
+</head>
+<body>
+		<% 
+		ComplaintDAO dao= new ComplaintDAO();
+		Complain[] ArrComp=dao.showAll();
+		
+		%>
+		<form method="get" action="ShowAllComp.jsp">
+		<center>
+			<table border="1">
+				<tr>
+				<th>Complaint Id</th>
+				<th>Complaint Type</th>
+				<th>Complaint Discrption</th>
+				<th>Complaint Date</th>
+				<th>Complaint Severity</th>
+				<th>Complaint Status</th>
+				<th>DELETE</th>
+				</tr>
+				
+			<%
+				for(Complain Comp:ArrComp ){
+					
+				%>
+				<%!Date dt;%>
+				<%dt= Comp.getcDate();%>
+				
+				<% if(dao.dateDiff(dt)<=1){
+					%>
+				
+					<tr style="background-color: green;">
+					<td><%=Comp.getcId() %></td>
+					<td><%=Comp.getcType()%></td>
+					<td><%=Comp.getcDis()%></td>
+					<td><%=Comp.getcDate()%></td>
+					<td><%=Comp.getSever()%></td>
+					<td><%=Comp.getStats()%></td>
+					<td><a href=DeleteComp.jsp?cId=<%=Comp.getcId()%>>Delete</a></td>
+					</tr>
+					<%} %>
+				<%if(dao.dateDiff(dt)>1 && dao.dateDiff(dt)<7){ %>
+					
+					<tr style="background-color: Yellow;">
+					<td><%=Comp.getcId() %></td>
+					<td><%=Comp.getcType()%></td>
+					<td><%=Comp.getcDis()%></td>
+					<td><%=Comp.getcDate()%></td>
+					<td><%=Comp.getSever()%></td>
+					<td><%=Comp.getStats()%></td>
+					<td><a href=DeleteComp.jsp?cId=<%=Comp.getcId()%>>Delete</a></td>
+					</tr>
+					
+					<%} %>
+					
+					<%if(dao.dateDiff(dt)>=7){ %>
+					
+					<tr style="background-color: red;">
+					<td><%=Comp.getcId() %></td>
+					<td><%=Comp.getcType()%></td>
+					<td><%=Comp.getcDis()%></td>
+					<td><%=Comp.getcDate()%></td>
+					<td><%=Comp.getSever()%></td>
+					<td><%=Comp.getStats()%></td>
+					<td><a href=DeleteComp.jsp?cId=<%=Comp.getcId()%>>Delete</a></td>
+					</tr>
+					<%} %>
+				<%} %>
+					
+			</table>
+		</center>
+		</form>
+		<br/><br/>
+		<form method="get" action="AddComp.jsp" align="center">
+		<input type="submit" value="Add Complaint"/>
+		</form>
+</body>
+</html>
+-------------------------------------------------------------------------------------------------------------------
+
+<!--        ***DELETE COMPLAINT***     -->
+
+<%@page import="infinite.ComplaintJsp.ComplaintDAO"%>
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+    pageEncoding="ISO-8859-1"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Insert title here</title>
+</head>
+<body>
+	<%
+	String cId = request.getParameter("cId");
+	ComplaintDAO dao = new ComplaintDAO();
+	dao.DeleteComp(cId);
+%>
+<jsp:forward page="ShowAllComp.jsp"/>
+</body>
+</html>
+----------------------------------------------------------------------------------------------------------------------
+
+<!--           ***RESOLVE COMPLAINT***          -->
+
+
+
+<%@page import="java.sql.Date"%>
+<%@page import="java.text.SimpleDateFormat"%>
+<%@page import="infinite.ComplaintJsp.Resolve"%>
+
+<%@page import="infinite.ComplaintJsp.Complain"%>
+<%@page import="infinite.ComplaintJsp.ComplaintDAO"%>
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+    pageEncoding="ISO-8859-1"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Insert title here</title>
+</head>
+<body>
+	<%
+	ComplaintDAO dao = new ComplaintDAO();
+	String cId = request.getParameter("cId");
+	Complain comp = dao.SearchComp(cId);
+	%>
+	<%!Date dt; %>	
+	<%dt=comp.getcDate(); %>
+	<form method="get" action="ResolveComp.jsp">
+	<center>
+	Complaint Id
+	<input type="text" name="cId" readonly="readonly" value=<%=cId%>><br/><br/>
+	
+	Complaint Date 
+	<input type="date" readonly="readonly" name="date" value<%=dt %>><br/><br/>
+	Resolving Date
+	<input type="date" name="DateR" /><br/><br/>
+	Resolving By
+	<input type="text" name="rslvdBy"/><br/><br/>
+	Comments
+	<input type="text" name="Comment"/>
+	<br/><br/>
+	<input type="submit" value="Resolve"><br/><br/>
+	</center>
+	</form>
+	
+	<%
+		if(dao.SearchRes(cId)!=null){
+		Resolve res=new Resolve();
+		res.setcId("cId");
+		res.setcDate(Date.valueOf((request.getParameter("date"))));
+		Date Rdt=Date.valueOf(request.getParameter("DateR"));
+		java.sql.Date RDT=new java.sql.Date(Rdt.getTime());
+		res.setcDate(Date.valueOf(request.getParameter("DateR")));
+		res.setRslvdBy(request.getParameter("rslvdBy"));
+		res.setCmnt(request.getParameter("Comment"));
+		%>
+			
+			
+			
+		<% }%>
+	
+</body>
+</html>
+
+------------------------------------------------------------------------------------------------------------------------
+
+/*                        ***RESOLVE COMPLAINT***              */
+
+package infinite.ComplaintJsp;
+
+import java.sql.Date;
+
+public class Resolve {
+	Complain comp=new Complain();
+	private Date cDate;
+	private String cId;
+	private Date rDate;
+	private String rslvdBy;
+	private String cmnt;
+	public Date getcDate() {
+		return cDate;
+	}
+	public void setcDate(Date cDate) {
+		this.cDate = cDate;
+	}
+	public String getcId() {
+		return cId;
+	}
+	public void setcId(String cId) {
+		this.cId = cId;
+	}
+	public Date getrDate() {
+		return rDate;
+	}
+	public void setrDate(Date rDate) {
+		this.rDate = rDate;
+	}
+	public String getRslvdBy() {
+		return rslvdBy;
+	}
+	public void setRslvdBy(String rslvdBy) {
+		this.rslvdBy = rslvdBy;
+	}
+	public String getCmnt() {
+		return cmnt;
+	}
+	public void setCmnt(String cmnt) {
+		this.cmnt = cmnt;
+	}
+	
+	@Override
+	public String toString() {
+		return "Resolve [cDate=" + cDate + ", cId=" + cId + ", rDate=" + rDate + ", rslvdBy=" + rslvdBy + ", cmnt="
+				+ cmnt + "]";
+	}
+}
+-----------------------------------------------------------------------------------------------------------------------------
